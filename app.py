@@ -2,12 +2,11 @@ import streamlit as st
 import requests
 import folium
 from streamlit_folium import st_folium
-import numpy as np
 
 st.set_page_config(page_title="Flood Risk Prediction", layout="wide")
 
 st.title("🌊 Flood Risk Prediction System")
-st.write("Predict flood risk using weather data.")
+st.write("Predict flood risk using real-time weather data.")
 
 # Tamil Nadu districts with coordinates
 districts = {
@@ -22,51 +21,41 @@ districts = {
 }
 
 st.sidebar.header("Select Location")
-
 district = st.sidebar.selectbox("Choose District", list(districts.keys()))
 
 lat, lon = districts[district]
 
-# store values so they don't reset
-if "temp" not in st.session_state:
-    st.session_state.temp = 0
-if "wind" not in st.session_state:
-    st.session_state.wind = 0
+if st.sidebar.button("Get Live Weather Data"):
 
-if st.sidebar.button("Get Weather Data"):
-
-    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,wind_speed_10m,precipitation"
 
     try:
         response = requests.get(url, timeout=10)
 
         if response.status_code == 200:
+
             data = response.json()
 
-            if "current_weather" in data:
-                st.session_state.temp = data["current_weather"]["temperature"]
-                st.session_state.wind = data["current_weather"]["windspeed"]
-
-            else:
-                st.warning("Weather data not available")
+            temp = data["current"]["temperature_2m"]
+            wind = data["current"]["wind_speed_10m"]
+            rainfall = data["current"]["precipitation"]
 
         else:
             st.error("Weather API error")
+            temp = wind = rainfall = 0
 
     except:
         st.error("Connection error")
+        temp = wind = rainfall = 0
+
+else:
+    temp = wind = rainfall = 0
 
 
-# simulated rainfall
-rainfall = np.random.randint(0, 200)
-
-temp = st.session_state.temp
-wind = st.session_state.wind
-
-# flood logic
-if rainfall > 120 or wind > 40:
-    risk = "High Flood Risk 🔴"
-elif rainfall > 70:
+# Flood risk prediction logic
+if rainfall > 50:
+    risk = "Severe Flood Risk 🔴"
+elif rainfall > 20:
     risk = "Moderate Flood Risk 🟠"
 else:
     risk = "Low Flood Risk 🟢"
@@ -98,4 +87,4 @@ folium.Marker(
 st_folium(m, width=700)
 
 st.markdown("---")
-st.write("Developed using Streamlit and Open Meteo API")
+st.write("Developed using Streamlit and Open-Meteo API")

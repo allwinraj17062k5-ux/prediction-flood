@@ -4,7 +4,7 @@ import folium
 from streamlit_folium import st_folium
 import numpy as np
 
-# Page configuration
+# Page config
 st.set_page_config(page_title="Flood Risk Prediction", layout="wide")
 
 # Title
@@ -17,34 +17,35 @@ st.sidebar.header("Location Input")
 lat = st.sidebar.number_input("Latitude", value=13.0827)
 lon = st.sidebar.number_input("Longitude", value=80.2707)
 
-# Weather API request (updated API format)
-url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,wind_speed_10m"
-
+# Default values
 temp = 0
 wind = 0
 
+# Weather API URL
+url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,wind_speed_10m"
+
 try:
-    response = requests.get(url)
+    response = requests.get(url, timeout=10)
 
     if response.status_code == 200:
         data = response.json()
 
         if "current" in data:
-            temp = data["current"]["temperature_2m"]
-            wind = data["current"]["wind_speed_10m"]
+            temp = data["current"].get("temperature_2m", 0)
+            wind = data["current"].get("wind_speed_10m", 0)
         else:
-            st.warning("Weather data not available")
+            st.warning("Weather data not available from API")
 
     else:
-        st.error("Weather API error")
+        st.error(f"Weather API error (Status code: {response.status_code})")
 
-except Exception:
-    st.error("Failed to fetch weather data")
+except requests.exceptions.RequestException as e:
+    st.error(f"Connection error: {e}")
 
-# Simulated rainfall (demo purpose)
+# Simulated rainfall
 rainfall = np.random.randint(0, 200)
 
-# Flood prediction logic
+# Flood risk logic
 if rainfall > 120 or wind > 40:
     risk = "High Flood Risk 🔴"
 elif rainfall > 70:
@@ -52,7 +53,7 @@ elif rainfall > 70:
 else:
     risk = "Low Flood Risk 🟢"
 
-# Display weather data
+# Weather display
 st.subheader("Current Weather Data")
 
 col1, col2, col3 = st.columns(3)
@@ -61,11 +62,11 @@ col1.metric("Temperature (°C)", temp)
 col2.metric("Wind Speed (km/h)", wind)
 col3.metric("Rainfall (mm)", rainfall)
 
-# Flood risk result
+# Prediction result
 st.subheader("Flood Risk Prediction")
 st.success(risk)
 
-# Map display
+# Map
 st.subheader("Location Map")
 
 m = folium.Map(location=[lat, lon], zoom_start=10)
@@ -80,4 +81,4 @@ st_folium(m, width=700)
 
 # Footer
 st.markdown("---")
-st.write("Developed using Streamlit and Open Meteo API")
+st.write("Developed using Streamlit and Open-Meteo API")

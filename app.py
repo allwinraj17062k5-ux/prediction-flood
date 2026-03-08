@@ -9,18 +9,31 @@ st.set_page_config(page_title="Flood Risk Prediction", layout="wide")
 st.title("🌊 Flood Risk Prediction System")
 st.write("Predict flood risk using weather data.")
 
-st.sidebar.header("Location Input")
+# Tamil Nadu districts with coordinates
+districts = {
+    "Chennai": [13.0827, 80.2707],
+    "Coimbatore": [11.0168, 76.9558],
+    "Madurai": [9.9252, 78.1198],
+    "Salem": [11.6643, 78.1460],
+    "Tiruchirappalli": [10.7905, 78.7047],
+    "Erode": [11.3410, 77.7172],
+    "Vellore": [12.9165, 79.1325],
+    "Tirunelveli": [8.7139, 77.7567]
+}
 
-lat = st.sidebar.number_input("Latitude", value=13.0827)
-lon = st.sidebar.number_input("Longitude", value=80.2707)
+st.sidebar.header("Select Location")
 
-# Button to fetch weather
-get_weather = st.sidebar.button("Get Weather Data")
+district = st.sidebar.selectbox("Choose District", list(districts.keys()))
 
-temp = 0
-wind = 0
+lat, lon = districts[district]
 
-if get_weather:
+# store values so they don't reset
+if "temp" not in st.session_state:
+    st.session_state.temp = 0
+if "wind" not in st.session_state:
+    st.session_state.wind = 0
+
+if st.sidebar.button("Get Weather Data"):
 
     url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
 
@@ -31,14 +44,11 @@ if get_weather:
             data = response.json()
 
             if "current_weather" in data:
-                temp = data["current_weather"]["temperature"]
-                wind = data["current_weather"]["windspeed"]
+                st.session_state.temp = data["current_weather"]["temperature"]
+                st.session_state.wind = data["current_weather"]["windspeed"]
 
             else:
                 st.warning("Weather data not available")
-
-        elif response.status_code == 429:
-            st.error("API rate limit reached. Try again later.")
 
         else:
             st.error("Weather API error")
@@ -46,16 +56,21 @@ if get_weather:
     except:
         st.error("Connection error")
 
-# Simulated rainfall
+
+# simulated rainfall
 rainfall = np.random.randint(0, 200)
 
-# Flood prediction logic
+temp = st.session_state.temp
+wind = st.session_state.wind
+
+# flood logic
 if rainfall > 120 or wind > 40:
     risk = "High Flood Risk 🔴"
 elif rainfall > 70:
     risk = "Moderate Flood Risk 🟠"
 else:
     risk = "Low Flood Risk 🟢"
+
 
 st.subheader("Current Weather Data")
 
@@ -65,17 +80,19 @@ col1.metric("Temperature (°C)", temp)
 col2.metric("Wind Speed (km/h)", wind)
 col3.metric("Rainfall (mm)", rainfall)
 
+
 st.subheader("Flood Risk Prediction")
 st.success(risk)
 
+
 st.subheader("Location Map")
 
-m = folium.Map(location=[lat, lon], zoom_start=10)
+m = folium.Map(location=[lat, lon], zoom_start=9)
 
 folium.Marker(
     [lat, lon],
-    popup=risk,
-    tooltip="Selected Location"
+    popup=district,
+    tooltip=district
 ).add_to(m)
 
 st_folium(m, width=700)

@@ -1,45 +1,50 @@
 import streamlit as st
-import pandas as pd
 import requests
 import folium
 from streamlit_folium import st_folium
 import numpy as np
 
+# Page configuration
 st.set_page_config(page_title="Flood Risk Prediction", layout="wide")
 
+# Title
 st.title("🌊 Flood Risk Prediction System")
 st.write("Predict flood risk using real-time weather data.")
 
-# Sidebar inputs
+# Sidebar input
 st.sidebar.header("Location Input")
 
 lat = st.sidebar.number_input("Latitude", value=13.0827)
 lon = st.sidebar.number_input("Longitude", value=80.2707)
 
-# Weather API
-url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
+# Weather API request (updated API format)
+url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,wind_speed_10m"
+
+temp = 0
+wind = 0
 
 try:
     response = requests.get(url)
-    data = response.json()
 
-    if "current_weather" in data:
-        temp = data["current_weather"]["temperature"]
-        wind = data["current_weather"]["windspeed"]
+    if response.status_code == 200:
+        data = response.json()
+
+        if "current" in data:
+            temp = data["current"]["temperature_2m"]
+            wind = data["current"]["wind_speed_10m"]
+        else:
+            st.warning("Weather data not available")
+
     else:
-        temp = 0
-        wind = 0
-        st.warning("Weather data not available")
+        st.error("Weather API error")
 
-except:
-    temp = 0
-    wind = 0
+except Exception:
     st.error("Failed to fetch weather data")
 
-# Simulated rainfall (for demo)
+# Simulated rainfall (demo purpose)
 rainfall = np.random.randint(0, 200)
 
-# Flood risk logic
+# Flood prediction logic
 if rainfall > 120 or wind > 40:
     risk = "High Flood Risk 🔴"
 elif rainfall > 70:
@@ -47,7 +52,7 @@ elif rainfall > 70:
 else:
     risk = "Low Flood Risk 🟢"
 
-# Display weather
+# Display weather data
 st.subheader("Current Weather Data")
 
 col1, col2, col3 = st.columns(3)
@@ -56,7 +61,7 @@ col1.metric("Temperature (°C)", temp)
 col2.metric("Wind Speed (km/h)", wind)
 col3.metric("Rainfall (mm)", rainfall)
 
-# Flood result
+# Flood risk result
 st.subheader("Flood Risk Prediction")
 st.success(risk)
 
